@@ -30,9 +30,9 @@ https://github.com/perrygeo/pi_sensor_realtime
 żeby odpalić potrzeba websocketd http://websocketd.com/
 Po odpaleniu źródła, zlewu i procesora można zrobić
 ```
-$ ./manager.sh start websocket
+$ ./manager.sh start monitor
 ...
-$ ./manager.sh stop websocket
+$ ./manager.sh stop monitor
 ```
-Przeglądarka internetowa powinna otworzyć się automatycznie. Jeśli tak się nie stanie, należy otworzyć *graf.html*.
+Dashboard jest pod `localhost:8083/monitor`
 

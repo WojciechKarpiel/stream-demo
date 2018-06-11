@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html xmlns:th="http://www.thymeleaf.org">
   <head>
     <title>TURBO GRAF W CZASIE RZECZYWISTYM</title>
     <script type="text/javascript" src="vendor/smoothie.js"></script>
@@ -19,7 +19,7 @@
             lineWidth: 3 });
         chart.streamTo(document.getElementById("chart"), 500);
       }
-      var ws = new ReconnectingWebSocket('ws://localhost:8080/');
+      var ws = new ReconnectingWebSocket('ws://localhost:8083/result');
       ws.onopen = function() {
         document.body.style.backgroundColor = '#cfc';
       };
@@ -27,10 +27,10 @@
         document.body.style.backgroundColor = null;
       };
       ws.onmessage = function(event) {
-        var data = event.data.split(",");
-        var timestamp = parseFloat(data[0]);  // timestamp is in ms
-          var value = parseFloat(data[1]);
-          console.log( timestamp+ " - " + value);
+        var data = JSON.parse(event.data);
+        var timestamp = data.timestamp;  // timestamp is in ms
+        var value = data.receivedMessagesCount;
+        console.log( timestamp+ " - " + value);
         readings.append(timestamp, value);
       };
     </script>

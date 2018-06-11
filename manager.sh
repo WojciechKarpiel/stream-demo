@@ -6,7 +6,7 @@ run_source='mvn spring-boot:run -pl source'
 run_sink='mvn spring-boot:run -pl sink'
 run_flink='mvn spring-boot:run -pl flink-processor'
 run_kafkastreams='mvn spring-boot:run -pl kafkastreamsprocessor'
-run_websocket='xdg-open graf.html; websocketd --port=8080 tail -f results.txt'
+run_websocket='mvn spring-boot:run -pl monitor'
 
 print_help(){
     echo "$0 (start|stop) (source|sink|spark|flink|kafkastreams|websocket)"
