@@ -3,6 +3,7 @@ package pl.edu.agh.sparkprocessor;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.spark.broadcast.Broadcast;
 import org.apache.spark.streaming.api.java.JavaInputDStream;
 import org.apache.spark.streaming.api.java.JavaPairDStream;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -23,7 +24,7 @@ public class WordCount implements Algorithm {
     public void run(String broker,
                     String resultTopic,
                     JavaInputDStream<ConsumerRecord<String, String>> messages,
-                    Map<String, Object> kafkaParams
+                    Broadcast<KafkaSink> kafkaSink
     ) {
         final JavaPairDStream<String, Integer> wordCounts = messages
                 .map(ConsumerRecord::value)
@@ -34,11 +35,7 @@ public class WordCount implements Algorithm {
         wordCounts.foreachRDD(rdd -> {
             String resultMessage = new ObjectMapper().writeValueAsString(rdd.collectAsMap());
             System.out.println(resultMessage);
-
-            KafkaProducer<String, String> producer = new KafkaProducer<>(kafkaParams);
-
-            producer.send(new ProducerRecord<>(resultTopic, resultMessage));
-            producer.close();
+            kafkaSink.getValue().send(resultTopic, resultMessage);
         });
     }
 }

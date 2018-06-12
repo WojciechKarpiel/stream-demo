@@ -9,6 +9,7 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.broadcast.Broadcast;
 import org.apache.spark.streaming.Duration;
 import org.apache.spark.streaming.Durations;
 import org.apache.spark.streaming.api.java.JavaInputDStream;
@@ -22,7 +23,7 @@ import java.util.Map;
 
 public class Processor {
     private static final String LOG_LEVEL = "WARN";
-    private static final Duration BATCH_DURATION = Durations.seconds(5);
+    private static final Duration BATCH_DURATION = Durations.milliseconds(1);
 
     private final String broker = getEnvOrExitWithError("BROKER_HOST_PORT");
     private final String sinkTopic = getEnvOrExitWithError("SINK_TOPIC");
@@ -41,11 +42,16 @@ public class Processor {
     public static void main(String[] args) throws InterruptedException {
         final Processor processor = new Processor();
 
+        final Broadcast<KafkaSink> kafkaSink = processor
+                .javaStreamingContext
+                .sparkContext()
+                .broadcast(new KafkaSink(getOutputKafkaParams(processor.broker)));
+
         processor.algorithm.run(
                 processor.broker,
                 processor.sinkTopic,
                 processor.inputStream,
-                getOutputKafkaParams(processor.broker)
+                kafkaSink
         );
 
         processor.javaStreamingContext.start();
@@ -65,7 +71,7 @@ public class Processor {
     private static JavaStreamingContext setupSpark() {
         final SparkConf sparkConf = new SparkConf()
                 .setAppName("spark-processor")
-                .setMaster("local[1]");
+                .setMaster("local[2]");
 
         final JavaStreamingContext javaStreamingContext = new JavaStreamingContext(sparkConf, BATCH_DURATION);
         final JavaSparkContext sc = javaStreamingContext.sparkContext();

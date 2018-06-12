@@ -1,14 +1,12 @@
 package pl.edu.agh.sparkprocessor;
 
 import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.spark.broadcast.Broadcast;
 import org.apache.spark.streaming.api.java.JavaDStream;
 import org.apache.spark.streaming.api.java.JavaInputDStream;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 
 public class LinearRegression implements Algorithm {
     private static final String NAME = "LINEAR_REGRESSION";
@@ -33,8 +31,9 @@ public class LinearRegression implements Algorithm {
     public void run(String broker,
                     String resultTopic,
                     JavaInputDStream<ConsumerRecord<String, String>> messages,
-                    Map<String, Object> kafkaParams
+                    Broadcast<KafkaSink> kafkaSink
     ) {
+
         final JavaDStream<String> numberCounts = messages
                 .map(ConsumerRecord::value).flatMap(x -> Arrays.asList(x).iterator());
 
@@ -44,12 +43,9 @@ public class LinearRegression implements Algorithm {
                 this.addNum(Double.parseDouble(number));
                 final String resultMessage = this.regression();
 
-                KafkaProducer<String, String> producer = new KafkaProducer<>(kafkaParams);
-                producer.send(new ProducerRecord<>(resultTopic, resultMessage));
-                producer.close();
+                kafkaSink.getValue().send(resultTopic, resultMessage);
             }
         });
-
     }
 
     private String regression() {
