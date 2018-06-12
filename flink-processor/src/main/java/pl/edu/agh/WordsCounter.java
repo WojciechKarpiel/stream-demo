@@ -1,9 +1,14 @@
 package pl.edu.agh;
 
-import org.apache.flink.api.common.functions.MapFunction;
 
-public class WordsCounter implements MapFunction<String, String> {
+public class WordsCounter implements Algorithm {
+    private static final String NAME = "WORD_COUNT";
     private long wordsCounter = 0;
+
+    @Override
+    public boolean checkName(String name) {
+        return name.equals(NAME);
+    }
 
     @Override
     public String map(String value) throws Exception {

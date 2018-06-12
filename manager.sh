@@ -1,7 +1,17 @@
-#!/bin/sh
+#!/usr/bin/env bash
+
+
+export ALGORITHM="LINEAR_REGRESSION"
+#export ALGORITHM="WORD_COUNT"
+
+export BROKER_HOST_PORT="localhost:9092"
+
+export SINK_TOPIC="sink"
+
+export INPUT_TOPIC="$ALGORITHM-input"
 
 # końcówka '-pl <nazwa-modułu>' pozwala z katalogu głównego projektu zawołać zadany moduł
-run_spark='BROKERS="localhost:9092" TOPICS="my-source" mvn install exec:java -pl spark-processor'
+run_spark='mvn install exec:java -pl spark-processor'
 run_source='mvn spring-boot:run -pl source'
 run_sink='mvn spring-boot:run -pl sink'
 run_flink='mvn spring-boot:run -pl flink-processor'

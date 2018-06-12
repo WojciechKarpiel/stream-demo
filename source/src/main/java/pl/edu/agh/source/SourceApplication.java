@@ -1,5 +1,6 @@
 package pl.edu.agh.source;
 
+import com.google.common.collect.ImmutableList;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -9,16 +10,20 @@ import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 
-import java.util.Random;
-import java.util.stream.Collectors;
+import java.util.List;
+
 
 @SpringBootApplication
 @EnableBinding(Source.class)
 @EnableScheduling
 public class SourceApplication {
 
-    private static final Random random = new Random();
     private final Source source;
+
+    private final StreamGenerator generator = chooseGenerator(
+            getEnvOrExitWithError("ALGORITHM"),
+            ImmutableList.of(new WordCountGenerator(), new LinearRegressionGenerator())
+    );
 
     @Autowired
     public SourceApplication(Source source) {
@@ -29,24 +34,29 @@ public class SourceApplication {
         SpringApplication.run(SourceApplication.class, args);
     }
 
-    private static String generateRandomText() {
-        return random
-                .ints(random.nextInt(1000), 'a', 'z' + 1)
-                .mapToObj(x -> String.valueOf((char) x))
-                .collect(Collectors.joining(" "));
-    }
-
-    private static String generateRandomNumbers() {
-        double d = -1000 + 2000 * random.nextDouble();
-        System.out.println("Sending " +d);
-        return d+"";
-    }
 
     @Scheduled(fixedRate = 1)
     private void send() {
-        source.output().send(MessageBuilder.withPayload(
-//                generateRandomText()
-                generateRandomNumbers()
-        ).build());
+        source.output().send(MessageBuilder.withPayload(generator.generate()).build());
+    }
+
+    private static String getEnvOrExitWithError(String name) {
+        final String env = System.getenv(name);
+        if (env != null)
+            return env;
+
+        System.err.println("\"" + name + "\" env must be provided");
+        System.exit(1);
+        return null;
+    }
+
+    private static StreamGenerator chooseGenerator(String generatorName, List<StreamGenerator> availableGenerators) {
+        for (StreamGenerator generator : availableGenerators)
+            if (generator.checkName(generatorName))
+                return generator;
+
+        System.err.println("\"" + generatorName + "\" not implemented");
+        System.exit(1);
+        return null;
     }
 }

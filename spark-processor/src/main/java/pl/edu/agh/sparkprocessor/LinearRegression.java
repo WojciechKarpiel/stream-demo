@@ -1,47 +1,82 @@
 package pl.edu.agh.sparkprocessor;
 
-import java.util.List;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.spark.streaming.api.java.JavaDStream;
+import org.apache.spark.streaming.api.java.JavaInputDStream;
 
-public class LinearRegression {
-    private static final int MAXN = 100000;
-    private static final double[] x = new double[MAXN];
-    private static final double[] y = new double[MAXN];
-    private static final boolean verbose =true;
-    static {
-        for (int i = 0; i < MAXN; i++) {
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+
+public class LinearRegression implements Algorithm {
+    private static final String NAME = "LINEAR_REGRESSION";
+
+    private final int MAX_N = 100000;
+    private final double[] x = new double[MAX_N];
+    private final double[] y = new double[MAX_N];
+    private final boolean verbose = true;
+
+    LinearRegression() {
+        for (int i = 0; i < MAX_N; i++) {
             x[i] = i;
         }
     }
 
-    public static String regression() {
-        //https://introcs.cs.princeton.edu/java/97data/LinearRegression.java.html
-                int n = 0;
+    @Override
+    public boolean checkName(String name) {
+        return name.equals(NAME);
+    }
 
-                // first pass: read in data, compute xbar and ybar
-                double sumx = 0.0, sumy = 0.0, sumx2 = 0.0;
-                for(int i=0; i<MAXN;i++){
-                    sumx  += x[n];
-                    sumx2 += x[n] * x[n];
-                    sumy  += y[n];
-                    n++;
-                }
-                double xbar = sumx / n;
-                double ybar = sumy / n;
+    @Override
+    public void run(String broker,
+                    String resultTopic,
+                    JavaInputDStream<ConsumerRecord<String, String>> messages,
+                    Map<String, Object> kafkaParams
+    ) {
+        final JavaDStream<String> numberCounts = messages
+                .map(ConsumerRecord::value).flatMap(x -> Arrays.asList(x).iterator());
 
-                // second pass: compute summary statistics
-                double xxbar = 0.0, yybar = 0.0, xybar = 0.0;
-                for (int i = 0; i < n; i++) {
-                    xxbar += (x[i] - xbar) * (x[i] - xbar);
-                    yybar += (y[i] - ybar) * (y[i] - ybar);
-                    xybar += (x[i] - xbar) * (y[i] - ybar);
-                }
-                double beta1 = xybar / xxbar;
-                double beta0 = ybar - beta1 * xbar;
+        numberCounts.foreachRDD(rdd -> {
+            final List<String> numbers = rdd.collect();
+            for (String number : numbers) {
+                this.addNum(Double.parseDouble(number));
+                final String resultMessage = this.regression();
 
-                // print results
-        String res ="y   = " + beta1 + " * x + " + beta0;
+                KafkaProducer<String, String> producer = new KafkaProducer<>(kafkaParams);
+                producer.send(new ProducerRecord<>(resultTopic, resultMessage));
+                producer.close();
+            }
+        });
 
-        if(verbose) {
+    }
+
+    private String regression() {
+        int n = 0;
+
+        double sumx = 0.0, sumy = 0.0, sumx2 = 0.0;
+        for (int i = 0; i < MAX_N; i++) {
+            sumx += x[n];
+            sumx2 += x[n] * x[n];
+            sumy += y[n];
+            n++;
+        }
+        double xbar = sumx / n;
+        double ybar = sumy / n;
+
+        double xxbar = 0.0, yybar = 0.0, xybar = 0.0;
+        for (int i = 0; i < n; i++) {
+            xxbar += (x[i] - xbar) * (x[i] - xbar);
+            yybar += (y[i] - ybar) * (y[i] - ybar);
+            xybar += (x[i] - xbar) * (y[i] - ybar);
+        }
+        double beta1 = xybar / xxbar;
+        double beta0 = ybar - beta1 * xbar;
+
+        String res = "y   = " + beta1 + " * x + " + beta0;
+
+        if (verbose) {
             // analyze results
             int df = n - 2;
             double rss = 0.0;      // residual sum of squares
@@ -68,27 +103,11 @@ public class LinearRegression {
             System.out.println("SSE  = " + rss);
             System.out.println("SSR  = " + ssr);
         }
-            return res;
-        }
-
-
-
-
-    public static void addNum(double d){
-        System.arraycopy(y, 0, y, 1, MAXN - 1);
-        y[0]=d;
+        return res;
     }
 
-
-    public static void main(String[] args){
-        LinearRegression r = new LinearRegression();
-        for(int i=0;i<MAXN;i++){
-            r.y[i]=i;
-        }
-        System.out.println(r.y[0] +" "+r.y[1]+" "+r.y[2] + ".."+r.y[MAXN-2]+" "+r.y[MAXN-1]);
-        System.out.println(r.regression());
-        r.addNum(-1);
-        System.out.println(r.y[0] +" "+r.y[1]+" "+r.y[2] + ".."+r.y[MAXN-2]+" "+r.y[MAXN-1]);
-        System.out.println(r.regression());
+    private void addNum(double d) {
+        System.arraycopy(y, 0, y, 1, MAX_N - 1);
+        y[0] = d;
     }
 }

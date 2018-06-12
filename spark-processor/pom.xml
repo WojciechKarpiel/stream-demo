@@ -46,7 +46,11 @@
             <version>2.9.5</version>
         </dependency>
 
-
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>25.1-jre</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -86,7 +90,7 @@
                     <groupId>org.codehaus.mojo</groupId>
                     <artifactId>exec-maven-plugin</artifactId>
                     <configuration>
-                        <mainClass>pl.edu.agh.sparkprocessor.WordCountProcessor</mainClass>
+                        <mainClass>pl.edu.agh.sparkprocessor.Processor</mainClass>
                     </configuration>
                 </plugin>
 
